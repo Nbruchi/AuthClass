@@ -1,12 +1,12 @@
 import NextAuth from "next-auth";
-
-import authConfig from "@/auth.config";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { db } from "@/lib/db";
-import { getUserById } from "@/data/user";
 import { UserRole } from "@prisma/client";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+
+import { db } from "@/lib/db";
+import authConfig from "@/auth.config";
+import { getUserById } from "@/data/user";
 import { getTwoFactorConfirmationByUserId } from "@/data/two-factor-confirmation";
-import { getAccountByUserId } from "@/data/account";
+import { getAccountByUserId } from "./data/account";
 
 export const {
   handlers: { GET, POST },
@@ -28,11 +28,12 @@ export const {
   },
   callbacks: {
     async signIn({ user, account }) {
-      //Allow OAuth without email verification
+      // Allow OAuth without email verification
       if (account?.provider !== "credentials") return true;
-      const existingUser = await getUserById(<string>user.id);
 
-      // Prevent signIn without email verification
+      const existingUser = await getUserById(user.id);
+
+      // Prevent sign in without email verification
       if (!existingUser?.emailVerified) return false;
 
       if (existingUser.isTwoFactorEnabled) {
@@ -42,6 +43,7 @@ export const {
 
         if (!twoFactorConfirmation) return false;
 
+        // Delete two factor confirmation for next sign in
         await db.twoFactorConfirmation.delete({
           where: { id: twoFactorConfirmation.id },
         });
@@ -49,7 +51,7 @@ export const {
 
       return true;
     },
-    async session({ session, token }) {
+    async session({ token, session }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
@@ -72,7 +74,9 @@ export const {
     },
     async jwt({ token }) {
       if (!token.sub) return token;
+
       const existingUser = await getUserById(token.sub);
+
       if (!existingUser) return token;
 
       const existingAccount = await getAccountByUserId(existingUser.id);
