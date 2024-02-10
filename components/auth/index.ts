@@ -6,3 +6,9 @@ export * from "./social";
 export * from "./back-button";
 export * from "./register-form";
 export * from "./error-card"
+export * from "./reset-form"
+export * from "./new-verification-form"
+export * from "./new-password-form"
+export * from "./logout-button"
+export * from "./user-button"
+export * from "./user-info"
